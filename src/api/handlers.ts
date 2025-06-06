@@ -24,5 +24,29 @@ export async function handlerReset(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
 	res.send(`fileserver hits reset to 0\n`);
 	res.end();
-
 }
+
+export async function handlerValidateChirp(req: Request, res: Response): Promise<void> {
+	let body = "";
+
+	req.on("data", (chunk) => {
+		body += chunk;
+	});
+
+	req.on("end", () => {
+		try {
+			const payload = JSON.parse(body);
+			if (payload.body.length > 140) {
+				throw new Error(`Chirp is too long`);
+			}
+			res.header("Content-Type", "application/json");
+			res.status(200).send(JSON.stringify({ "valid": true }));
+			res.end();
+		} catch (e) {
+			res.header("Content-Type", "application/json");
+			res.status(400).send(JSON.stringify({ "error": `${(e as Error).message}` }));
+			res.end();
+		}
+	});
+}
+
