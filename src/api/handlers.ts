@@ -29,32 +29,44 @@ export async function handlerReset(_: Request, res: Response): Promise<void> {
 
 export async function handlerValidateChirp(req: Request, res: Response): Promise<void> {
 	type parameters = { body: string };
+	try {
+		const params: parameters = req.body;
 
-	let body = "";
-
-	req.on("data", (chunk) => {
-		body += chunk;
-	});
-
-	req.on("end", () => {
-		try {
-			let params: parameters;
-
-			try {
-				params = JSON.parse(body);
-			} catch (e) {
-				throw new Error(`Invalid JSON`);
-			}
-
-			const maxChirpLength = 140;
-			if (params.body.length > maxChirpLength) {
-				throw new Error(`Chirp is too long`);
-			}
-
-			respondWithJSON(res, 200, { valid: true })
-		} catch (e) {
-			respondWithError(res, 400, (e as Error).message)
+		if (params.body.length > 140) {
+			throw new Error(`Chirp is too long`);
 		}
-	});
+		respondWithJSON(res, 200, { valid: true });
+	} catch (e) {
+		respondWithError(res, 400, (e as Error).message);
+	}
+
+	// this is an example of manual json streaming and parsing
+	//
+	// let body = "";
+	//
+	// req.on("data", (chunk) => {
+	// 	body += chunk;
+	// });
+	//
+	// req.on("end", () => {
+	// 	try {
+	// 		let params: parameters;
+	//
+	// 		try {
+	// 			params = JSON.parse(body);
+	// 		} catch (e) {
+	// 			throw new Error(`Invalid JSON`);
+	// 		}
+	//
+	// 		const maxChirpLength = 140;
+	// 		if (params.body.length > maxChirpLength) {
+	// 			throw new Error(`Chirp is too long`);
+	// 		}
+	//
+	// 		respondWithJSON(res, 200, { valid: true })
+	// 	} catch (e) {
+	// 		respondWithError(res, 400, (e as Error).message)
+	// 	}
+	// });
 }
 
