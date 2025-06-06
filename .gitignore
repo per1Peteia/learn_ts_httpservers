@@ -1,0 +1,16 @@
+
+
+node_modules/
+dist/
+src/lib/db/meta/
+
+whereami.md
+
+.env
+.env.local
+
+npm-debug.log*
+yarn-debug.log*
+
+*.log
+
