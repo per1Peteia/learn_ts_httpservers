@@ -1,5 +1,6 @@
 import { Response, Request } from "express"
 import { config } from "../config.js";
+import { respondWithError, respondWithJSON } from "./json.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -27,6 +28,8 @@ export async function handlerReset(_: Request, res: Response): Promise<void> {
 }
 
 export async function handlerValidateChirp(req: Request, res: Response): Promise<void> {
+	type parameters = { body: string };
+
 	let body = "";
 
 	req.on("data", (chunk) => {
@@ -35,17 +38,22 @@ export async function handlerValidateChirp(req: Request, res: Response): Promise
 
 	req.on("end", () => {
 		try {
-			const payload = JSON.parse(body);
-			if (payload.body.length > 140) {
+			let params: parameters;
+
+			try {
+				params = JSON.parse(body);
+			} catch (e) {
+				throw new Error(`Invalid JSON`);
+			}
+
+			const maxChirpLength = 140;
+			if (params.body.length > maxChirpLength) {
 				throw new Error(`Chirp is too long`);
 			}
-			res.header("Content-Type", "application/json");
-			res.status(200).send(JSON.stringify({ "valid": true }));
-			res.end();
+
+			respondWithJSON(res, 200, { valid: true })
 		} catch (e) {
-			res.header("Content-Type", "application/json");
-			res.status(400).send(JSON.stringify({ "error": `${(e as Error).message}` }));
-			res.end();
+			respondWithError(res, 400, (e as Error).message)
 		}
 	});
 }
