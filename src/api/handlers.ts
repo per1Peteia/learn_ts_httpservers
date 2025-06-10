@@ -1,6 +1,7 @@
 import { Response, Request } from "express"
 import { config } from "../config.js";
 import { respondWithError, respondWithJSON } from "./json.js";
+import { cleanChirp } from "./util.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -35,7 +36,10 @@ export async function handlerValidateChirp(req: Request, res: Response): Promise
 		if (params.body.length > 140) {
 			throw new Error(`Chirp is too long`);
 		}
-		respondWithJSON(res, 200, { valid: true });
+
+		const result = cleanChirp(params.body);
+
+		respondWithJSON(res, 200, { cleanedBody: result });
 	} catch (e) {
 		respondWithError(res, 400, (e as Error).message);
 	}
