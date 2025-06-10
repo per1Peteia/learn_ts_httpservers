@@ -11,8 +11,14 @@ export function middlewareLogResponses(req: Request, res: Response, next: NextFu
 	next();
 }
 
-export function middlewareMetricsInc(req: Request, res: Response, next: NextFunction): void {
+export function middlewareMetricsInc(_: Request, __: Response, next: NextFunction): void {
 	config.fileServerHits++;
 	next();
+}
+
+export function errorHandler(err: Error, _: Request, res: Response, __: NextFunction): void {
+	res.status(500).json({
+		error: "Something went wrong on our end"
+	});
 }
 

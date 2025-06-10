@@ -30,19 +30,15 @@ export async function handlerReset(_: Request, res: Response): Promise<void> {
 
 export async function handlerValidateChirp(req: Request, res: Response): Promise<void> {
 	type parameters = { body: string };
-	try {
-		const params: parameters = req.body;
+	const params: parameters = req.body;
 
-		if (params.body.length > 140) {
-			throw new Error(`Chirp is too long`);
-		}
-
-		const result = cleanChirp(params.body);
-
-		respondWithJSON(res, 200, { cleanedBody: result });
-	} catch (e) {
-		respondWithError(res, 400, (e as Error).message);
+	if (params.body.length > 140) {
+		throw new Error(`Chirp is too long`);
 	}
+
+	const result = cleanChirp(params.body);
+
+	respondWithJSON(res, 200, { cleanedBody: result });
 
 	// this is an example of manual json streaming and parsing
 	//
