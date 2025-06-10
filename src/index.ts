@@ -1,9 +1,15 @@
 import express from "express";
 import { handlerReadiness, handlerMetrics, handlerReset, handlerValidateChirp } from "./api/handlers.js";
 import { errorHandler, middlewareLogResponses, middlewareMetricsInc } from "./api/middleware.js";
+import postgres from "postgres";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { config } from "./config.js";
+
+const migrationClient = postgres(config.db.url, { max: 1 });
+await migrate(drizzle(migrationClient), config.db.migrationConfig);
 
 const app = express();
-const port = 8080;
 
 
 app.use(middlewareLogResponses);
@@ -26,7 +32,7 @@ app.post("/admin/reset", (req, res, next) => {
 
 app.use(errorHandler);
 
-app.listen(port, () => {
-	console.log(`listening on localhost:${port}`);
+app.listen(config.api.port, () => {
+	console.log(`listening on localhost:${config.api.port}`);
 });
 
