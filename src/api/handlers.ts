@@ -4,7 +4,7 @@ import { respondWithJSON } from "./json.js";
 import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError } from "./errors.js";
 import { createUser, deleteUsers } from "../lib/db/queries/users.js";
-import { createChirp } from "../lib/db/queries/chirps.js";
+import { createChirp, getChirps } from "../lib/db/queries/chirps.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -63,6 +63,25 @@ export async function handlerCreateChirp(req: Request, res: Response): Promise<v
 		body: chirp.body,
 		userId: chirp.userId,
 	});
+}
+
+export async function handlerGetChirps(_: Request, res: Response): Promise<void> {
+	const chirps = await getChirps();
+	if (chirps.length === 0) {
+		throw new Error(`could'nt get chirps`);
+	}
+	let payload = [];
+	for (let chirp of chirps) {
+		payload.push({
+			id: chirp.id,
+			createdAt: chirp.createdAt,
+			updatedAt: chirp.updatedAt,
+			body: chirp.body,
+			userId: chirp.userId,
+		});
+	}
+
+	respondWithJSON(res, 200, payload);
 }
 
 export async function handlerCreateUser(req: Request, res: Response): Promise<void> {
