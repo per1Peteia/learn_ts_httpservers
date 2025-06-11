@@ -1,8 +1,10 @@
 import { Response, Request } from "express"
 import { config } from "../config.js";
 import { respondWithJSON } from "./json.js";
-import { cleanChirp } from "./util.js";
-import { BadRequestError } from "./errors.js";
+import { validChirp } from "./util.js";
+import { BadRequestError, ForbiddenError } from "./errors.js";
+import { createUser, deleteUsers } from "../lib/db/queries/users.js";
+import { createChirp } from "../lib/db/queries/chirps.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -23,52 +25,63 @@ export async function handlerMetrics(_: Request, res: Response) {
 }
 
 export async function handlerReset(_: Request, res: Response): Promise<void> {
+	if (config.api.platform !== "dev") {
+		throw new ForbiddenError(`Not authorized`);
+	}
 	config.api.fileServerHits = 0;
-	res.set("Content-Type", "text/plain; charset=utf-8");
-	res.send(`fileserver hits reset to 0\n`);
-	res.end();
+	await deleteUsers();
+	respondWithJSON(res, 200, { body: "fileserver hits reset, users deleted" });
 }
 
-export async function handlerValidateChirp(req: Request, res: Response): Promise<void> {
-	type parameters = { body: string };
+
+export async function handlerCreateChirp(req: Request, res: Response): Promise<void> {
+	type parameters = {
+		body: string,
+		userId: string,
+	};
+
 	const params: parameters = req.body;
 
-	const maxChirpLength = 140;
-	if (params.body.length > maxChirpLength) {
-		throw new BadRequestError(`Chirp is too long. Max length is ${maxChirpLength}`);
+	if (!params.body || !params.userId) {
+		throw new BadRequestError(`missing required fields`);
 	}
 
-	const result = cleanChirp(params.body);
+	const cleanBody = validChirp(params.body)
+	if (!cleanBody) {
+		throw new Error(`failed validation`);
+	}
 
-	respondWithJSON(res, 200, { cleanedBody: result });
+	const chirp = await createChirp({ body: cleanBody, userId: params.userId });
+	if (!chirp) {
+		throw new Error(`cannot create chirp`);
+	}
 
-	// this is an example of manual json streaming and parsing
-	//
-	// let body = "";
-	//
-	// req.on("data", (chunk) => {
-	// 	body += chunk;
-	// });
-	//
-	// req.on("end", () => {
-	// 	try {
-	// 		let params: parameters;
-	//
-	// 		try {
-	// 			params = JSON.parse(body);
-	// 		} catch (e) {
-	// 			throw new Error(`Invalid JSON`);
-	// 		}
-	//
-	// 		const maxChirpLength = 140;
-	// 		if (params.body.length > maxChirpLength) {
-	// 			throw new Error(`Chirp is too long`);
-	// 		}
-	//
-	// 		respondWithJSON(res, 200, { valid: true })
-	// 	} catch (e) {
-	// 		respondWithError(res, 400, (e as Error).message)
-	// 	}
-	// });
+	respondWithJSON(res, 201, {
+		id: chirp.id,
+		createdAt: chirp.createdAt,
+		updatedAt: chirp.updatedAt,
+		body: chirp.body,
+		userId: chirp.userId,
+	});
 }
 
+export async function handlerCreateUser(req: Request, res: Response): Promise<void> {
+	type parameters = { email: string };
+	const params: parameters = req.body;
+
+	if (!params.email) {
+		throw new BadRequestError(`missing required fields`)
+	}
+
+	const user = await createUser({ email: params.email })
+	if (!user) {
+		throw new Error(`cannot create user`);
+	}
+
+	respondWithJSON(res, 201, {
+		id: user.id,
+		email: user.email,
+		createdAt: user.createdAt,
+		updatedAt: user.updatedAt,
+	});
+}

@@ -19,6 +19,7 @@ export function middlewareMetricsInc(_: Request, __: Response, next: NextFunctio
 }
 
 export function errorHandler(err: Error, _: Request, res: Response, __: NextFunction): void {
+	console.error('Error caught by middleware:', err);
 	let code = 500;
 	let message = "Something went wrong on our end";
 	if (err instanceof BadRequestError) {

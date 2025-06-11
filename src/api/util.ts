@@ -1,4 +1,14 @@
+import { BadRequestError } from "./errors.js";
 
+export function validChirp(body: string) {
+	const maxChirpLength = 140;
+	if (body.length > maxChirpLength) {
+		throw new BadRequestError(`Chirp is too long. Max length is ${maxChirpLength}`);
+	}
+
+	const cleaned = cleanChirp(body);
+	return cleaned;
+}
 
 export function cleanChirp(body: string): string {
 	const words = body.split(" ");
