@@ -5,7 +5,7 @@ import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
 import { createUser, deleteUsers, getUserByEmail } from "../lib/db/queries/users.js";
 import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
-import { checkPasswordHash, hashPassword } from "./auth.js";
+import { checkPasswordHash, hashPassword } from "../auth.js";
 import { NewUser } from "src/lib/db/schema.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
