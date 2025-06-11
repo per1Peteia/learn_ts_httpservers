@@ -6,6 +6,7 @@ import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } fro
 import { createUser, deleteUsers, getUserByEmail } from "../lib/db/queries/users.js";
 import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
 import { checkPasswordHash, hashPassword } from "./auth.js";
+import { NewUser } from "src/lib/db/schema.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -89,12 +90,12 @@ export async function handlerCreateUser(req: Request, res: Response): Promise<vo
 		throw new BadRequestError(`missing required fields`)
 	}
 
-	const hash = hashPassword(params.password);
+	const hash = await hashPassword(params.password);
 
 	const user = await createUser({
 		hashedPassword: hash,
 		email: params.email
-	})
+	} satisfies NewUser);
 
 	if (!user) {
 		throw new Error(`cannot create user`);
@@ -105,8 +106,10 @@ export async function handlerCreateUser(req: Request, res: Response): Promise<vo
 		email: user.email,
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
-	});
+	} satisfies UserResponse);
 }
+
+type UserResponse = Omit<NewUser, "hashedPassword">;
 
 export async function handlerUserLogin(req: Request, res: Response): Promise<void> {
 	type parameters = {
@@ -125,7 +128,7 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		throw new Error(`couldn't find user`);
 	}
 
-	if (!checkPasswordHash(params.password, user.hashedPassword)) {
+	if (!await checkPasswordHash(params.password, user.hashedPassword)) {
 		throw new UnauthorizedError(`Incorrect email or password`);
 	}
 
@@ -134,5 +137,5 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
 		email: user.email,
-	});
+	} satisfies UserResponse);
 }
