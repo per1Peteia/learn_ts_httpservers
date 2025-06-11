@@ -2,9 +2,9 @@ import { Response, Request } from "express"
 import { config } from "../config.js";
 import { respondWithJSON } from "./json.js";
 import { validChirp } from "./util.js";
-import { BadRequestError, ForbiddenError } from "./errors.js";
+import { BadRequestError, ForbiddenError, NotFoundError } from "./errors.js";
 import { createUser, deleteUsers } from "../lib/db/queries/users.js";
-import { createChirp, getChirps } from "../lib/db/queries/chirps.js";
+import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -65,6 +65,16 @@ export async function handlerGetChirps(_: Request, res: Response): Promise<void>
 		throw new Error(`could'nt get chirps`);
 	}
 	respondWithJSON(res, 200, chirps);
+}
+
+export async function handlerGetChirp(req: Request, res: Response): Promise<void> {
+	const id = req.params.chirpID
+	const chirp = await getChirpById(id);
+	if (!chirp) {
+		throw new NotFoundError(`cannot find chirp`);
+	}
+
+	respondWithJSON(res, 200, chirp);
 }
 
 export async function handlerCreateUser(req: Request, res: Response): Promise<void> {
