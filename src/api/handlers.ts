@@ -56,13 +56,7 @@ export async function handlerCreateChirp(req: Request, res: Response): Promise<v
 		throw new Error(`cannot create chirp`);
 	}
 
-	respondWithJSON(res, 201, {
-		id: chirp.id,
-		createdAt: chirp.createdAt,
-		updatedAt: chirp.updatedAt,
-		body: chirp.body,
-		userId: chirp.userId,
-	});
+	respondWithJSON(res, 201, chirp);
 }
 
 export async function handlerGetChirps(_: Request, res: Response): Promise<void> {
@@ -70,18 +64,7 @@ export async function handlerGetChirps(_: Request, res: Response): Promise<void>
 	if (chirps.length === 0) {
 		throw new Error(`could'nt get chirps`);
 	}
-	let payload = [];
-	for (let chirp of chirps) {
-		payload.push({
-			id: chirp.id,
-			createdAt: chirp.createdAt,
-			updatedAt: chirp.updatedAt,
-			body: chirp.body,
-			userId: chirp.userId,
-		});
-	}
-
-	respondWithJSON(res, 200, payload);
+	respondWithJSON(res, 200, chirps);
 }
 
 export async function handlerCreateUser(req: Request, res: Response): Promise<void> {
