@@ -2,9 +2,10 @@ import { Response, Request } from "express"
 import { config } from "../config.js";
 import { respondWithJSON } from "./json.js";
 import { validChirp } from "./util.js";
-import { BadRequestError, ForbiddenError, NotFoundError } from "./errors.js";
-import { createUser, deleteUsers } from "../lib/db/queries/users.js";
+import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
+import { createUser, deleteUsers, getUserByEmail } from "../lib/db/queries/users.js";
 import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
+import { checkPasswordHash, hashPassword } from "./auth.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -78,14 +79,23 @@ export async function handlerGetChirp(req: Request, res: Response): Promise<void
 }
 
 export async function handlerCreateUser(req: Request, res: Response): Promise<void> {
-	type parameters = { email: string };
+	type parameters = {
+		password: string;
+		email: string;
+	};
 	const params: parameters = req.body;
 
-	if (!params.email) {
+	if (!params.email || !params.password) {
 		throw new BadRequestError(`missing required fields`)
 	}
 
-	const user = await createUser({ email: params.email })
+	const hash = hashPassword(params.password);
+
+	const user = await createUser({
+		hashedPassword: hash,
+		email: params.email
+	})
+
 	if (!user) {
 		throw new Error(`cannot create user`);
 	}
@@ -95,5 +105,34 @@ export async function handlerCreateUser(req: Request, res: Response): Promise<vo
 		email: user.email,
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
+	});
+}
+
+export async function handlerUserLogin(req: Request, res: Response): Promise<void> {
+	type parameters = {
+		password: string;
+		email: string;
+	}
+
+	const params: parameters = req.body;
+
+	if (!params.password || !params.email) {
+		throw new BadRequestError(`missing required fields`);
+	}
+
+	const user = await getUserByEmail(params.email);
+	if (!user) {
+		throw new Error(`couldn't find user`);
+	}
+
+	if (!checkPasswordHash(params.password, user.hashedPassword)) {
+		throw new UnauthorizedError(`Incorrect email or password`);
+	}
+
+	respondWithJSON(res, 200, {
+		id: user.id,
+		createdAt: user.createdAt,
+		updatedAt: user.updatedAt,
+		email: user.email,
 	});
 }
