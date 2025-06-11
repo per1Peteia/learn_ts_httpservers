@@ -9,6 +9,7 @@ type APIConfig = {
 	fileServerHits: number;
 	port: number;
 	platform: string;
+	secret: string;
 }
 
 type DBConfig = {
@@ -23,12 +24,14 @@ const platform = envOrThrow("PLATFORM");
 const migrationConfig: MigrationConfig = {
 	migrationsFolder: "./src/lib/db/",
 };
+const secret = envOrThrow("SECRET");
 
 export const config: Config = {
 	api: {
 		fileServerHits: 0,
 		port: port,
 		platform: platform,
+		secret: secret,
 	},
 	db: {
 		url: url,

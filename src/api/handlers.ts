@@ -5,7 +5,7 @@ import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
 import { createUser, deleteUsers, getUserByEmail } from "../lib/db/queries/users.js";
 import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
-import { checkPasswordHash, hashPassword } from "../auth.js";
+import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, validateJWT } from "../auth.js";
 import { NewUser } from "src/lib/db/schema.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
@@ -39,21 +39,23 @@ export async function handlerReset(_: Request, res: Response): Promise<void> {
 export async function handlerCreateChirp(req: Request, res: Response): Promise<void> {
 	type parameters = {
 		body: string,
-		userId: string,
 	};
 
 	const params: parameters = req.body;
 
-	if (!params.body || !params.userId) {
+	if (!params.body) {
 		throw new BadRequestError(`missing required fields`);
 	}
+
+	const token = getBearerToken(req)
+	const userId = validateJWT(token, config.api.secret)
 
 	const cleanBody = validChirp(params.body)
 	if (!cleanBody) {
 		throw new Error(`failed validation`);
 	}
 
-	const chirp = await createChirp({ body: cleanBody, userId: params.userId });
+	const chirp = await createChirp({ body: cleanBody, userId: userId });
 	if (!chirp) {
 		throw new Error(`cannot create chirp`);
 	}
@@ -115,6 +117,7 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 	type parameters = {
 		password: string;
 		email: string;
+		expiresInSeconds: number;
 	}
 
 	const params: parameters = req.body;
@@ -132,10 +135,18 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		throw new UnauthorizedError(`Incorrect email or password`);
 	}
 
+	let expiresIn = params.expiresInSeconds;
+	if (!params.expiresInSeconds || params.expiresInSeconds > 3600) {
+		expiresIn = 3600;
+	}
+
+	const token = makeJWT(user.id, expiresIn, config.api.secret);
+
 	respondWithJSON(res, 200, {
 		id: user.id,
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
 		email: user.email,
-	} satisfies UserResponse);
+		token: token,
+	});
 }
