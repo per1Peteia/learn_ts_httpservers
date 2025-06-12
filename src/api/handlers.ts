@@ -48,7 +48,7 @@ export async function handlerCreateChirp(req: Request, res: Response): Promise<v
 	}
 
 	const token = getBearerToken(req)
-	const userId = validateJWT(token, config.api.secret)
+	const userId = validateJWT(token, config.jwt.secret)
 
 	const cleanBody = validChirp(params.body)
 	if (!cleanBody) {
@@ -112,12 +112,13 @@ export async function handlerCreateUser(req: Request, res: Response): Promise<vo
 }
 
 type UserResponse = Omit<NewUser, "hashedPassword">;
+type LoginResponse = UserResponse & { token: string };
 
 export async function handlerUserLogin(req: Request, res: Response): Promise<void> {
 	type parameters = {
 		password: string;
 		email: string;
-		expiresInSeconds: number;
+		expiresInSeconds?: number;
 	}
 
 	const params: parameters = req.body;
@@ -135,12 +136,12 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		throw new UnauthorizedError(`Incorrect email or password`);
 	}
 
-	let expiresIn = params.expiresInSeconds;
-	if (!params.expiresInSeconds || params.expiresInSeconds > 3600) {
-		expiresIn = 3600;
+	let expiresIn = config.jwt.defaultDuration;
+	if (params.expiresInSeconds && params.expiresInSeconds > config.jwt.defaultDuration) {
+		expiresIn = params.expiresInSeconds
 	}
 
-	const token = makeJWT(user.id, expiresIn, config.api.secret);
+	const token = makeJWT(user.id, expiresIn, config.jwt.secret);
 
 	respondWithJSON(res, 200, {
 		id: user.id,
@@ -148,5 +149,5 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		updatedAt: user.updatedAt,
 		email: user.email,
 		token: token,
-	});
+	} satisfies LoginResponse);
 }

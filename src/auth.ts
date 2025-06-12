@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { UnauthorizedError } from "./api/errors.js";
+import { BadRequestError, UnauthorizedError } from "./api/errors.js";
 import { Request } from "express";
 
 export async function hashPassword(password: string) {
@@ -53,10 +53,13 @@ export function validateJWT(tokenString: string, secret: string): string {
 }
 
 export function getBearerToken(req: Request): string {
-	const tokenStr = req.get("Authorization")
-	if (!tokenStr) {
-		throw new UnauthorizedError(`missing authorization token`);
+	const header = req.get("Authorization")
+	if (!header) {
+		throw new BadRequestError(`malformed authorization header`);
 	}
-	const token = tokenStr.split(" ")[1];
-	return token;
+	const splitAuth = header.split(" ");
+	if (splitAuth.length < 2 || splitAuth[0] !== "Bearer") {
+		throw new BadRequestError(`malformed authorization header`);
+	}
+	return splitAuth[1];
 }
