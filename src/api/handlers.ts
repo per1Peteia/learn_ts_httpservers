@@ -176,5 +176,5 @@ export async function handlerRevoke(req: Request, res: Response): Promise<void> 
 		throw new Error(`could not update refresh token revoke time`);
 	}
 
-	respondWithJSON(res, 204, {});
+	res.status(204).send();
 }
