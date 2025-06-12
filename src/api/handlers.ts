@@ -5,8 +5,9 @@ import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
 import { createUser, deleteUsers, getUserByEmail } from "../lib/db/queries/users.js";
 import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
-import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, validateJWT } from "../auth.js";
-import { NewUser } from "src/lib/db/schema.js";
+import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
+import { NewUser } from "../lib/db/schema.js";
+import { CreateRefreshToken, getUserFromRefreshToken, revokeRefreshToken } from "../lib/db/queries/auth.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
 	res.set("Content-Type", "text/plain; charset=utf-8");
@@ -112,13 +113,12 @@ export async function handlerCreateUser(req: Request, res: Response): Promise<vo
 }
 
 type UserResponse = Omit<NewUser, "hashedPassword">;
-type LoginResponse = UserResponse & { token: string };
+type LoginResponse = UserResponse & { token: string, refreshToken: string };
 
 export async function handlerUserLogin(req: Request, res: Response): Promise<void> {
 	type parameters = {
 		password: string;
 		email: string;
-		expiresInSeconds?: number;
 	}
 
 	const params: parameters = req.body;
@@ -136,18 +136,45 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		throw new UnauthorizedError(`Incorrect email or password`);
 	}
 
-	let expiresIn = config.jwt.defaultDuration;
-	if (params.expiresInSeconds && params.expiresInSeconds > config.jwt.defaultDuration) {
-		expiresIn = params.expiresInSeconds
-	}
+	const accessToken = makeJWT(user.id, config.jwt.defaultDuration, config.jwt.secret);
 
-	const token = makeJWT(user.id, expiresIn, config.jwt.secret);
+	const refreshToken = makeRefreshToken();
+	const expDate = new Date(Date.now() + (1000 * 60 * 60 * 24 * 60))
+	const ok = await CreateRefreshToken(refreshToken, user.id, expDate);
+	if (!ok) {
+		throw new Error(`could not add refresh token to db`);
+	}
 
 	respondWithJSON(res, 200, {
 		id: user.id,
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
 		email: user.email,
-		token: token,
+		token: accessToken,
+		refreshToken: refreshToken,
 	} satisfies LoginResponse);
+}
+
+export async function handlerRefresh(req: Request, res: Response): Promise<void> {
+	const refreshToken = getBearerToken(req);
+	const result = await getUserFromRefreshToken(refreshToken);
+	if (result.revoked) {
+		throw new UnauthorizedError(`refresh token is revoked`);
+	}
+	if (!result.userId) {
+		throw new UnauthorizedError(`no user found`);
+	}
+
+	const accessToken = makeJWT(result.userId, config.jwt.defaultDuration, config.jwt.secret);
+	respondWithJSON(res, 200, { token: accessToken })
+}
+
+export async function handlerRevoke(req: Request, res: Response): Promise<void> {
+	const refreshToken = getBearerToken(req);
+	const ok = await revokeRefreshToken(refreshToken);
+	if (!ok) {
+		throw new Error(`could not update refresh token revoke time`);
+	}
+
+	respondWithJSON(res, 204, {});
 }

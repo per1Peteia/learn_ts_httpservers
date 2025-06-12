@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { checkPasswordHash, hashPassword, makeJWT, validateJWT } from "./auth";
+import { describe, it, expect, beforeAll, expectTypeOf } from "vitest";
+import { checkPasswordHash, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "./auth";
 import { UnauthorizedError } from "./api/errors";
 
 describe("Password Hashing", () => {
@@ -42,5 +42,21 @@ describe("Validating JWTs", () => {
 
 	it("should throw an error bc wrong secret", async () => {
 		expect(() => validateJWT(validToken, badSecret)).toThrow(UnauthorizedError);
+	});
+});
+
+describe("make refresh token", () => {
+	let token: string;
+
+	beforeAll(async () => {
+		token = makeRefreshToken();
+	})
+
+	it("should return a string", async () => {
+		expect(token).toBeTypeOf("string");
+	});
+
+	it("should be 32 bytes long", () => {
+		expect(token).toHaveLength(64);
 	});
 });

@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, UnauthorizedError } from "./api/errors.js";
 import { Request } from "express";
+import crypto from "crypto";
 
 export async function hashPassword(password: string) {
 	const saltRounds = 10;
@@ -62,4 +63,8 @@ export function getBearerToken(req: Request): string {
 		throw new BadRequestError(`malformed authorization header`);
 	}
 	return splitAuth[1];
+}
+
+export function makeRefreshToken() {
+	return crypto.randomBytes(32).toString('hex')
 }

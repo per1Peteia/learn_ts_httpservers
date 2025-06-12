@@ -1,5 +1,5 @@
 import express from "express";
-import { handlerReadiness, handlerMetrics, handlerReset, handlerCreateUser, handlerCreateChirp, handlerGetChirps, handlerGetChirp, handlerUserLogin } from "./api/handlers.js";
+import { handlerReadiness, handlerMetrics, handlerReset, handlerCreateUser, handlerCreateChirp, handlerGetChirps, handlerGetChirp, handlerUserLogin, handlerRefresh, handlerRevoke } from "./api/handlers.js";
 import { errorHandler, middlewareLogResponses, middlewareMetricsInc } from "./api/middleware.js";
 import postgres from "postgres";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
@@ -17,6 +17,14 @@ app.use(express.json());
 
 app.post("/api/users", (req, res, next) => {
 	Promise.resolve(handlerCreateUser(req, res)).catch(next);
+});
+
+app.post("/api/refresh", (req, res, next) => {
+	Promise.resolve(handlerRefresh(req, res)).catch(next);
+});
+
+app.post("/api/revoke", (req, res, next) => {
+	Promise.resolve(handlerRevoke(req, res)).catch(next);
 });
 
 app.post("/api/login", (req, res, next) => {
