@@ -10,6 +10,7 @@ type APIConfig = {
 	fileServerHits: number;
 	port: number;
 	platform: string;
+	apiKey: string;
 }
 
 type DBConfig = {
@@ -31,12 +32,14 @@ const migrationConfig: MigrationConfig = {
 	migrationsFolder: "./src/lib/db/",
 };
 const secret = envOrThrow("SECRET");
+const apiKey = envOrThrow("POLKA_KEY");
 
 export const config: Config = {
 	api: {
 		fileServerHits: 0,
 		port: port,
 		platform: platform,
+		apiKey: apiKey,
 	},
 	db: {
 		url: url,

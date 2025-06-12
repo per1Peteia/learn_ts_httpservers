@@ -5,7 +5,7 @@ import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
 import { createUser, deleteUsers, getUserByEmail, updateUser, updateUserToRed } from "../lib/db/queries/users.js";
 import { createChirp, deleteChirpById, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
-import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
+import { checkPasswordHash, getAPIKey, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
 import { NewUser } from "../lib/db/schema.js";
 import { CreateRefreshToken, getUserFromRefreshToken, revokeRefreshToken } from "../lib/db/queries/auth.js";
 
@@ -140,6 +140,11 @@ export async function handlerUpdateUserToRed(req: Request, res: Response) {
 		data: {
 			userId: string;
 		};
+	}
+
+	const apiKey = getAPIKey(req);
+	if (apiKey !== config.api.apiKey) {
+		throw new UnauthorizedError(`wrong api key`);
 	}
 
 	const params: parameters = req.body;
