@@ -3,7 +3,7 @@ import { config } from "../config.js";
 import { respondWithJSON } from "./json.js";
 import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
-import { createUser, deleteUsers, getUserByEmail, updateUser } from "../lib/db/queries/users.js";
+import { createUser, deleteUsers, getUserByEmail, updateUser, updateUserToRed } from "../lib/db/queries/users.js";
 import { createChirp, deleteChirpById, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
 import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
 import { NewUser } from "../lib/db/schema.js";
@@ -130,7 +130,35 @@ export async function handlerCreateUser(req: Request, res: Response): Promise<vo
 		email: user.email,
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
+		isChirpyRed: user.isChirpyRed,
 	} satisfies UserResponse);
+}
+
+export async function handlerUpdateUserToRed(req: Request, res: Response) {
+	type parameters = {
+		event: string;
+		data: {
+			userId: string;
+		};
+	}
+
+	const params: parameters = req.body;
+
+	if (params.event !== "user.upgraded") {
+		res.status(204).send();
+		return;
+	}
+
+	if (!params.data.userId) {
+		throw new BadRequestError(`missing subject field`);
+	}
+
+	const upgraded = await updateUserToRed(params.data.userId)
+	if (!upgraded) {
+		throw new NotFoundError(`failed to upgrade user membership status`);
+	}
+
+	res.status(204).send();
 }
 
 type UserResponse = Omit<NewUser, "hashedPassword">;
@@ -171,6 +199,7 @@ export async function handlerUserLogin(req: Request, res: Response): Promise<voi
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
 		email: user.email,
+		isChirpyRed: user.isChirpyRed,
 		token: accessToken,
 		refreshToken: refreshToken,
 	} satisfies LoginResponse);
@@ -227,5 +256,6 @@ export async function handlerUpdateUserCreds(req: Request, res: Response): Promi
 		createdAt: user.createdAt,
 		updatedAt: user.updatedAt,
 		email: user.email,
+		isChirpyRed: user.isChirpyRed,
 	} satisfies UserResponse);
 }
