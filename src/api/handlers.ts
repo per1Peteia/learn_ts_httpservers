@@ -4,7 +4,7 @@ import { respondWithJSON } from "./json.js";
 import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
 import { createUser, deleteUsers, getUserByEmail, updateUser } from "../lib/db/queries/users.js";
-import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
+import { createChirp, deleteChirpById, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
 import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
 import { NewUser } from "../lib/db/schema.js";
 import { CreateRefreshToken, getUserFromRefreshToken, revokeRefreshToken } from "../lib/db/queries/auth.js";
@@ -73,13 +73,34 @@ export async function handlerGetChirps(_: Request, res: Response): Promise<void>
 }
 
 export async function handlerGetChirp(req: Request, res: Response): Promise<void> {
-	const id = req.params.chirpID
+	const id = req.params.chirpID;
 	const chirp = await getChirpById(id);
 	if (!chirp) {
 		throw new NotFoundError(`cannot find chirp`);
 	}
 
 	respondWithJSON(res, 200, chirp);
+}
+
+export async function handlerDeleteChirp(req: Request, res: Response) {
+	const chirpId = req.params.chirpID;
+	const aToken = getBearerToken(req);
+	const authedSubject = validateJWT(aToken, config.jwt.secret)
+	const chirp = await getChirpById(chirpId);
+	if (!chirp) {
+		throw new NotFoundError(`chirp not found`);
+	}
+
+	if (chirp.userId !== authedSubject) {
+		throw new ForbiddenError(`user not authorized`);
+	}
+
+	const deleted = await deleteChirpById(chirpId);
+	if (!deleted) {
+		throw new Error(`could not delete chirp`);
+	}
+
+	res.status(204).send();
 }
 
 export async function handlerCreateUser(req: Request, res: Response): Promise<void> {
