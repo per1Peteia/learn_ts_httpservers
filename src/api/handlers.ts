@@ -3,7 +3,7 @@ import { config } from "../config.js";
 import { respondWithJSON } from "./json.js";
 import { validChirp } from "./util.js";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "./errors.js";
-import { createUser, deleteUsers, getUserByEmail } from "../lib/db/queries/users.js";
+import { createUser, deleteUsers, getUserByEmail, updateUser } from "../lib/db/queries/users.js";
 import { createChirp, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
 import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
 import { NewUser } from "../lib/db/schema.js";
@@ -175,6 +175,36 @@ export async function handlerRevoke(req: Request, res: Response): Promise<void> 
 	if (!ok) {
 		throw new Error(`could not update refresh token revoke time`);
 	}
-
 	res.status(204).send();
+}
+
+export async function handlerUpdateUserCreds(req: Request, res: Response): Promise<void> {
+	const aToken = getBearerToken(req);
+	const userId = validateJWT(aToken, config.jwt.secret)
+
+	type parameters = {
+		password: string;
+		email: string;
+	}
+
+	const params: parameters = req.body;
+	if (!params.password) {
+		throw new BadRequestError(`missing password`);
+	}
+	if (!params.email) {
+		throw new BadRequestError(`missing email`);
+	}
+
+	const hash = await hashPassword(params.password);
+	const user = await updateUser(userId, hash, params.email);
+	if (!user) {
+		throw new Error(`could not update user creds`);
+	}
+
+	respondWithJSON(res, 200, {
+		id: user.id,
+		createdAt: user.createdAt,
+		updatedAt: user.updatedAt,
+		email: user.email,
+	} satisfies UserResponse);
 }
