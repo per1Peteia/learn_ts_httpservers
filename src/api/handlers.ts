@@ -65,13 +65,10 @@ export async function handlerCreateChirp(req: Request, res: Response): Promise<v
 }
 
 export async function handlerGetChirps(req: Request, res: Response): Promise<void> {
-	let authorId = null;
-	const query = req.query.authorId;
-	if (typeof query === "string") {
-		authorId = query;
-	}
+	const authorId = typeof req.query.authorId === "string" ? req.query.authorId : undefined;
+	const sort = typeof req.query.sort === "string" ? req.query.sort : undefined;
 
-	const chirps = await getChirps(authorId);
+	const chirps = await getChirps(authorId, sort);
 	if (chirps.length === 0) {
 		throw new Error(`could not get chirps`);
 	}
