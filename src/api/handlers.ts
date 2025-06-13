@@ -6,7 +6,7 @@ import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } fro
 import { createUser, deleteUsers, getUserByEmail, updateUser, updateUserToRed } from "../lib/db/queries/users.js";
 import { createChirp, deleteChirpById, getChirpById, getChirps } from "../lib/db/queries/chirps.js";
 import { checkPasswordHash, getAPIKey, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from "../auth.js";
-import { NewUser } from "../lib/db/schema.js";
+import { NewChirp, NewUser } from "../lib/db/schema.js";
 import { CreateRefreshToken, getUserFromRefreshToken, revokeRefreshToken } from "../lib/db/queries/auth.js";
 
 export async function handlerReadiness(_: Request, res: Response): Promise<void> {
@@ -64,10 +64,16 @@ export async function handlerCreateChirp(req: Request, res: Response): Promise<v
 	respondWithJSON(res, 201, chirp);
 }
 
-export async function handlerGetChirps(_: Request, res: Response): Promise<void> {
-	const chirps = await getChirps();
+export async function handlerGetChirps(req: Request, res: Response): Promise<void> {
+	let authorId = null;
+	const query = req.query.authorId;
+	if (typeof query === "string") {
+		authorId = query;
+	}
+
+	const chirps = await getChirps(authorId);
 	if (chirps.length === 0) {
-		throw new Error(`could'nt get chirps`);
+		throw new Error(`could not get chirps`);
 	}
 	respondWithJSON(res, 200, chirps);
 }
